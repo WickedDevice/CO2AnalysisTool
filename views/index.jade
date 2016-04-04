@@ -30,6 +30,9 @@ block content
       div.col-md-5.col-md-offset-1.text-right
         span(ng-show="header_loaded()") Target Device: &nbsp;
         select.c-select(ng-model="target_device", ng-options="obj.idx as obj.name for obj in target_devices", ng-show="header_loaded()", ng-change="target_device_change()")
+    div.row(ng-show="at_least_one_regression()", ng-repeat="item in regressions")
+      dov.col-md-5.text-right
+        div {{item.name}}: &nbsp;
     div.row
       div#scatterplot.col-md-12(style="height: 600px;")
 

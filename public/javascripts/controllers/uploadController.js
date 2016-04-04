@@ -14,11 +14,14 @@ angular.module('MyApp', ['ngFileUpload'])
     $scope.secondary_columns = [];
     $scope.primary_axis_title = null;
     $scope.secondary_axis_title = null;
-    $scope.target_devices = [];
-    $scope.target_device = null;
+    $scope.target_devices = [{idx: -1, name: 'None'}];
+    $scope.target_device = -1;
 
     $scope.regressions = []; // will ultimately contain an object encapsulating regression results for each egg
 
+    $scope.at_least_one_regression = function(){
+      return $scope.regressions.length > 0;
+    };
 
     $scope.header_loaded = function(){
         return $scope.csv_header_row.length > 0;
@@ -81,7 +84,7 @@ angular.module('MyApp', ['ngFileUpload'])
     }
 
     $scope.target_device_change = function(){
-
+      renderPlots();
     }
 
     $scope.uploadFiles = function (files) {
@@ -98,7 +101,9 @@ angular.module('MyApp', ['ngFileUpload'])
                 $timeout(function () {
                     $scope.result = response.data;
                     $scope.progress = -1; // clear the progress bar
-
+                    $scope.target_devices = [{idx: -1, name: 'None'}];
+                    $scope.target_device = -1;
+                    $scope.regressions = [];
 
                     $scope.csv_header_row = response.data.data[0].map(function(value, index){
                        return {
@@ -123,6 +128,8 @@ angular.module('MyApp', ['ngFileUpload'])
                         name: value
                       };
                     });
+                    $scope.target_devices = [{idx: -1, name: 'None'}].concat($scope.target_devices);
+
 
                     // hyphen is a delimiter, what we really want is a list of the unique
                     // things that are to the right of hypens in the values above
@@ -276,8 +283,10 @@ angular.module('MyApp', ['ngFileUpload'])
     function updateLogLinear(){
       var logdata = [];
       var primary_x_data = [];
+      var primary_x_moments = [];
       var primary_y_data = [];
       var secondary_x_data = [];
+      var secondary_x_moments = [];
       var secondary_y_data = [];
 
       if($scope.primary_columns) {
@@ -292,6 +301,16 @@ angular.module('MyApp', ['ngFileUpload'])
               return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
             }).map(function (currentValue, index) {
               return currentValue[0].str; // always plot against time
+            })
+          };
+
+          primary_x_moments[ii] = {
+            device: device_name,
+            data: $scope.csvdata.slice(1).filter(function (value) {
+              var m = value[0].moment;
+              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+            }).map(function (currentValue, index) {
+              return currentValue[0].moment; // always plot against time
             })
           };
 
@@ -329,6 +348,16 @@ angular.module('MyApp', ['ngFileUpload'])
               return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
             }).map(function (currentValue, index) {
               return currentValue[0].str; // always plot against time
+            })
+          };
+
+          secondary_x_moments[ii] = {
+            device: device_name,
+            data: $scope.csvdata.slice(1).filter(function(value){
+              var m = value[0].moment;
+              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+            }).map(function (currentValue, index) {
+              return currentValue[0].moment; // always plot against time
             })
           };
 
@@ -377,6 +406,105 @@ angular.module('MyApp', ['ngFileUpload'])
 
       if(loglayout.title){
         loglayout.title += " vs. Time";
+      }
+
+      // find the target device name
+      var target_name = null;
+      for(var ii = 0; ii < $scope.target_devices.length; ii++){
+        var device = $scope.target_devices[ii];
+        if(device.idx == $scope.target_device){
+          target_name = device.name;
+        }
+      }
+
+      if(target_name !== null){
+        var data_idx = null;
+        for(var ii = 0; ii < primary_x_data.length; ii++){
+          if(target_name == primary_x_data[ii].device){
+            data_idx = ii;
+            break;
+          }
+        }
+
+        // do the various maths on the target device data
+        var regression = null;
+        if(data_idx !== null) {
+          // Count the number of given x values.
+          // Calculate SUM(X), SUM(Y), SUM(X*Y), SUM(X^2) for the values
+          var num_x_values = 0;
+          var sum_xy_values = 0.0;
+          var sum_x_values = 0.0;
+          var sum_y_values = 0.0;
+          var sum_x_squared_values = 0.0;
+          for (var ii = 0; ii < primary_x_data[data_idx].data.length; ii++) {
+            var x_value = primary_x_moments[data_idx].data[ii];
+            var y_value = primary_y_data[data_idx].data[ii];
+
+            if (x_value != null && y_value != null && !isNaN(y_value)) {
+              var unix_time = x_value.unix();
+              sum_y_values += primary_y_data[data_idx].data[ii];
+              sum_x_values += unix_time;
+              sum_x_squared_values += unix_time * unix_time;
+              sum_xy_values += unix_time * y_value;
+              num_x_values++;
+            }
+          }
+
+          // Slope(b) = (N * SUM(X*Y) - SUM(X)*SUM(Y) / (N * SUM(X^2) - (SUM(X))^2)
+          // Intercept(a) = (SUM(Y) - b * SUM(X)) / N
+          var slope = (num_x_values * sum_xy_values - sum_x_values * sum_y_values) / (num_x_values * sum_x_squared_values - (sum_x_values * sum_x_values));
+          var intercept = (sum_y_values - slope * sum_x_values) / num_x_values;
+          var x_start = $scope.zoom_start_date.format("YYYY-MM-DD HH:mm:ss");
+          var x_end = $scope.zoom_end_date.format("YYYY-MM-DD HH:mm:ss");
+          var y_start = $scope.zoom_start_date.unix() * slope + intercept;
+          var y_end = $scope.zoom_end_date.unix() * slope + intercept;
+          var logtrace = {
+            x: [x_start, x_end],
+            y: [y_start, y_end],
+            mode: 'lines',
+            yaxis: 'y',
+            type: 'scatter',
+            name: target_name
+          };
+
+          regression = {
+            name: target_name,
+            slope: slope,
+            intercept: intercept,
+            trace: logtrace
+          };
+
+          // add the regression to the list of calculated regressions
+          var found = false;
+          for(var ii = 0; ii < $scope.regressions.length; ii++){
+            if($scope.regressions[ii].name == target_name){
+              $scope.regressions[ii] = regression;
+              found = true;
+              break;
+            }
+          }
+          if(!found){
+            $scope.regressions.push(regression);
+          }
+
+        }
+
+      }
+
+      // if there are any regressions, add them to the plot
+      for(var ii = 0; ii < $scope.regressions.length; ii++){
+        // go through all the regressions and re-evaluate the endpoints of the lines that are displayed
+        var slope = $scope.regressions[ii].slope;
+        var intercept = $scope.regressions[ii].intercept;
+        var x_start = $scope.zoom_start_date.format("YYYY-MM-DD HH:mm:ss");
+        var x_end = $scope.zoom_end_date.format("YYYY-MM-DD HH:mm:ss");
+        var y_start = $scope.zoom_start_date.unix() * slope + intercept;
+        var y_end = $scope.zoom_end_date.unix() * slope + intercept;
+        $scope.regressions[ii].trace.x[0] = x_start;
+        $scope.regressions[ii].trace.x[1] = x_end;
+        $scope.regressions[ii].trace.y[0] = y_start;
+        $scope.regressions[ii].trace.y[1] = y_end;
+        logdata.push($scope.regressions[ii].trace);
       }
 
       // plot the natural log of the data on the loglinear plot and keep the zooms in sync
