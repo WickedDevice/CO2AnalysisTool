@@ -28,11 +28,17 @@ angular.module('MyApp', ['ngFileUpload'])
         return $scope.csv_header_row.length > 0;
     };
 
+    $scope.asPercent = function(value){
+      return Math.round(value * 100) + "%";
+    };
+
     $scope.addToPlotPrimary = function(){
       // add all the columns that look "like" csv_header_row_reduced[primary_column]
       if($scope.primary_column === null){
         return;
       }
+
+      $scope.regressions = [];
 
       $scope.primary_axis_title = $scope.csv_header_row_reduced[$scope.primary_column].name;
 
