@@ -5,7 +5,7 @@
  */
 
 var app = require('../app');
-var debug = require('debug')('MultipleEggPlotter:server');
+var debug = require('debug')('CornellCO2Tool:server');
 var http = require('http');
 
 /**
