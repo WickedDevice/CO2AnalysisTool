@@ -30,9 +30,50 @@ block content
       div.col-md-5.col-md-offset-1.text-right
         span(ng-show="header_loaded()") Target Device: &nbsp;
         select.c-select(ng-model="target_device", ng-options="obj.idx as obj.name for obj in target_devices", ng-show="header_loaded()", ng-change="target_device_change()")
-    div.row(ng-show="at_least_one_regression()", ng-repeat="item in regressions")
-      dov.col-md-5.text-right
-        div {{item.name}}: &nbsp;
+    div.row(ng-show="at_least_one_regression()")
+      div.col-md-12
+        table.table.table-striped
+          tr
+            th Device Name
+            th Start Time
+            th End Time
+            th # Data Points Used
+            th Observed ACH [per hour]
+            th R
+              sup 2
+            th Concentration Half Life [minutes]
+          tr(ng-repeat="item in regressions")
+            td {{item.name}}
+            td {{item.start_basis_moment.format('YYYY-MM-DD HH:mm:ss')}}
+            td {{item.end_basis_moment.format('YYYY-MM-DD HH:mm:ss')}}
+            td {{item.num_points}}
+            td {{item.ACH}}
+            td {{item.r_squared}}
+            td {{item.concentration_half_life}}
+          tr
+            th Average:
+            td
+            td
+            td
+            td {{summary_stats.average_ACH}}
+            td {{summary_stats.average_r_squared}}
+            td {{summary_stats.average_concentration_half_life}}
+          tr
+            th Std Dev P:
+            td
+            td
+            td
+            td {{summary_stats.stdev_p_ACH}}
+            td {{summary_stats.stdev_p_r_squared}}
+            td {{summary_stats.stdev_p_concentration_half_life}}
+          tr
+            th Rel Std Dev:
+            td
+            td
+            td
+            td {{summary_stats.rel_stdev_ACH}}
+            td {{summary_stats.rel_stdev_r_squared}}
+            td {{summary_stats.rel_stdev_concentration_half_life}}
     div.row
       div#scatterplot.col-md-12(style="height: 600px;")
 

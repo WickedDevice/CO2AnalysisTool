@@ -18,6 +18,7 @@ angular.module('MyApp', ['ngFileUpload'])
     $scope.target_device = -1;
 
     $scope.regressions = []; // will ultimately contain an object encapsulating regression results for each egg
+    $scope.summary_stats = null;;
 
     $scope.at_least_one_regression = function(){
       return $scope.regressions.length > 0;
@@ -46,6 +47,7 @@ angular.module('MyApp', ['ngFileUpload'])
     };
 
     $scope.removeFromPlotPrimary = function(){
+      $scope.regressions = [];
       $scope.primary_columns = [];
       $scope.primary_axis_title = null;
       renderPlots();
@@ -104,6 +106,7 @@ angular.module('MyApp', ['ngFileUpload'])
                     $scope.target_devices = [{idx: -1, name: 'None'}];
                     $scope.target_device = -1;
                     $scope.regressions = [];
+                    $scope.summary_stats = null;
 
                     $scope.csv_header_row = response.data.data[0].map(function(value, index){
                        return {
@@ -436,6 +439,7 @@ angular.module('MyApp', ['ngFileUpload'])
           var sum_x_values = 0.0;
           var sum_y_values = 0.0;
           var sum_x_squared_values = 0.0;
+          // calculate the regression
           for (var ii = 0; ii < primary_x_data[data_idx].data.length; ii++) {
             var x_value = primary_x_moments[data_idx].data[ii];
             var y_value = primary_y_data[data_idx].data[ii];
@@ -454,6 +458,26 @@ angular.module('MyApp', ['ngFileUpload'])
           // Intercept(a) = (SUM(Y) - b * SUM(X)) / N
           var slope = (num_x_values * sum_xy_values - sum_x_values * sum_y_values) / (num_x_values * sum_x_squared_values - (sum_x_values * sum_x_values));
           var intercept = (sum_y_values - slope * sum_x_values) / num_x_values;
+
+          var y_mean = sum_y_values / num_x_values;
+          var total_sum_of_squares = 0.0;
+          var explained_sum_of_squares = 0.0;
+          var residual_sum_of_squares = 0.0;
+          // calculate the fit quality measures
+          for (var ii = 0; ii < primary_x_data[data_idx].data.length; ii++) {
+            var x_value = primary_x_moments[data_idx].data[ii];
+            var y_value = primary_y_data[data_idx].data[ii];
+            if (x_value != null && y_value != null && !isNaN(y_value)) {
+              var unix_time = x_value.unix();
+              var fit_value = unix_time * slope + intercept
+              total_sum_of_squares += (y_value - y_mean) * (y_value - y_mean);
+              explained_sum_of_squares += (fit_value - y_mean) * (fit_value - y_mean);
+              residual_sum_of_squares += (y_value - fit_value) * (y_value - fit_value);
+            }
+          }
+
+          var r_squared = 1 - (residual_sum_of_squares / total_sum_of_squares);
+
           var x_start = $scope.zoom_start_date.format("YYYY-MM-DD HH:mm:ss");
           var x_end = $scope.zoom_end_date.format("YYYY-MM-DD HH:mm:ss");
           var y_start = $scope.zoom_start_date.unix() * slope + intercept;
@@ -467,11 +491,20 @@ angular.module('MyApp', ['ngFileUpload'])
             name: target_name
           };
 
+          var ach = -slope * 3600; // inverted and converted to LOG(ppm)/hour, slope is in LOG(ppm)/second
+          var concentration_half_life = 60 * Math.log(2) / ach; // in minutes, because ach is in hours
           regression = {
             name: target_name,
             slope: slope,
             intercept: intercept,
-            trace: logtrace
+            r_squared: r_squared,
+            y_mean: y_mean,
+            num_points: num_x_values,
+            ACH: ach,
+            concentration_half_life: concentration_half_life,
+            trace: logtrace,
+            start_basis_moment: moment($scope.zoom_start_date),
+            end_basis_moment: moment($scope.zoom_end_date)
           };
 
           // add the regression to the list of calculated regressions
@@ -492,6 +525,11 @@ angular.module('MyApp', ['ngFileUpload'])
       }
 
       // if there are any regressions, add them to the plot
+      // also calculate the summary statistics if you please
+      var sum_ach = 0.0;
+      var sum_r_squared = 0.0;
+      var sum_concentration_half_life = 0.0;
+
       for(var ii = 0; ii < $scope.regressions.length; ii++){
         // go through all the regressions and re-evaluate the endpoints of the lines that are displayed
         var slope = $scope.regressions[ii].slope;
@@ -505,6 +543,39 @@ angular.module('MyApp', ['ngFileUpload'])
         $scope.regressions[ii].trace.y[0] = y_start;
         $scope.regressions[ii].trace.y[1] = y_end;
         logdata.push($scope.regressions[ii].trace);
+
+        sum_ach += $scope.regressions[ii].ACH;
+        sum_r_squared += $scope.regressions[ii].r_squared;
+        sum_concentration_half_life += $scope.regressions[ii].concentration_half_life;
+      }
+
+      if($scope.regressions.length > 0){
+        var num_regressions = $scope.regressions.length;
+        $scope.summary_stats = {
+          average_ACH: sum_ach / num_regressions,
+          average_r_squared: sum_r_squared / num_regressions,
+          average_concentration_half_life: sum_concentration_half_life / num_regressions
+        };
+
+        var ach_sum_error_squared = 0.0;
+        var r_squared_sum_error_squared = 0.0;
+        var concentration_half_life_sum_error_squared = 0.0;
+        for(var ii = 0; ii < num_regressions; ii++){
+          var error = ($scope.summary_stats.average_ACH - $scope.regressions[ii].ACH);
+          ach_sum_error_squared +=  error * error;
+          error = ($scope.summary_stats.average_r_squared - $scope.regressions[ii].r_squared);
+          r_squared_sum_error_squared += error * error;
+          error = ($scope.summary_stats.average_concentration_half_life - $scope.regressions[ii].concentration_half_life);
+          concentration_half_life_sum_error_squared += error * error;
+        }
+
+        $scope.summary_stats.stdev_p_ACH = Math.sqrt(ach_sum_error_squared / num_regressions);
+        $scope.summary_stats.stdev_p_r_squared = Math.sqrt(r_squared_sum_error_squared / num_regressions);
+        $scope.summary_stats.stdev_p_concentration_half_life = Math.sqrt(concentration_half_life_sum_error_squared / num_regressions);
+
+        $scope.summary_stats.rel_stdev_ACH = $scope.summary_stats.stdev_p_ACH / $scope.summary_stats.average_ACH;
+        $scope.summary_stats.rel_stdev_r_squared =$scope.summary_stats.stdev_p_r_squared / $scope.summary_stats.average_r_squared;
+        $scope.summary_stats.rel_stdev_concentration_half_life = $scope.summary_stats.stdev_p_concentration_half_life / $scope.summary_stats.average_concentration_half_life;
       }
 
       // plot the natural log of the data on the loglinear plot and keep the zooms in sync
