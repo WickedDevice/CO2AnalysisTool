@@ -14,6 +14,11 @@ angular.module('MyApp', ['ngFileUpload'])
     $scope.secondary_columns = [];
     $scope.primary_axis_title = null;
     $scope.secondary_axis_title = null;
+    $scope.target_devices = [];
+    $scope.target_device = null;
+
+    $scope.regressions = []; // will ultimately contain an object encapsulating regression results for each egg
+
 
     $scope.header_loaded = function(){
         return $scope.csv_header_row.length > 0;
@@ -75,6 +80,10 @@ angular.module('MyApp', ['ngFileUpload'])
       $scope.trace2_field = $scope.secondary_column
     }
 
+    $scope.target_device_change = function(){
+
+    }
+
     $scope.uploadFiles = function (files) {
         $scope.files = files;
         if (files && files.length) {
@@ -96,6 +105,23 @@ angular.module('MyApp', ['ngFileUpload'])
                            idx: index,
                            name: value
                        };
+                    });
+
+                    $scope.target_devices = {};
+                    for(var ii = 0; ii < $scope.csv_header_row.length; ii++){
+                      var tmp = $scope.csv_header_row[ii].name.split("-");
+                      if(tmp.length > 1){
+                        tmp = tmp[0].split(".");
+                        if(tmp.length > 1){
+                          $scope.target_devices[tmp[0]] = 1;
+                        }
+                      }
+                    }
+                    $scope.target_devices = Object.keys($scope.target_devices).map(function(value, index){
+                      return {
+                        idx: index,
+                        name: value
+                      };
                     });
 
                     // hyphen is a delimiter, what we really want is a list of the unique
@@ -173,7 +199,7 @@ angular.module('MyApp', ['ngFileUpload'])
               mode: 'lines+markers',
               yaxis: 'y',
               type: 'scatter',
-              name: $scope.csv_header_row[column].name
+              name: $scope.csv_header_row[column].name.split("-")[0].split(".")[0]
             };
             data.push(trace);
           }
@@ -192,14 +218,13 @@ angular.module('MyApp', ['ngFileUpload'])
               mode: 'lines+markers',
               yaxis: 'y2',
               type: 'scatter',
-              name: $scope.csv_header_row[column].name
+              name: $scope.csv_header_row[column].name.split("-")[0].split(".")[0]
             };
             data.push(trace);
           }
         }
 
         var layout = {height: 600};
-
 
         if($scope.primary_axis_title){
           layout.yaxis = {title: $scope.primary_axis_title};
@@ -214,8 +239,10 @@ angular.module('MyApp', ['ngFileUpload'])
           };
 
           if(layout.title){
-            layout.title += " and " + $scope.secondary_axis_title;
+            layout.title += " and ";
           }
+
+          layout.title += $scope.secondary_axis_title;
         }
 
         if(layout.title){
@@ -239,8 +266,120 @@ angular.module('MyApp', ['ngFileUpload'])
 
             }
 
+            updateLogLinear();
             $scope.$apply();
         });
 
+        updateLogLinear();
+    }
+
+    function updateLogLinear(){
+      var logdata = [];
+      var primary_x_data = [];
+      var primary_y_data = [];
+      var secondary_x_data = [];
+      var secondary_y_data = [];
+
+      if($scope.primary_columns) {
+        for (var ii = 0; ii < $scope.primary_columns.length; ii++) {
+          var column = $scope.primary_columns[ii];
+          var device_name = $scope.csv_header_row[column].name.split('-')[0].split(".")[0];
+
+          primary_x_data[ii] = {
+            device: device_name,
+            data: $scope.csvdata.slice(1).filter(function (value) {
+              var m = value[0].moment;
+              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+            }).map(function (currentValue, index) {
+              return currentValue[0].str; // always plot against time
+            })
+          };
+
+          primary_y_data[ii] = {
+            device: device_name,
+            data: $scope.csvdata.slice(1).filter(function(value){
+              var m = value[0].moment;
+              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+            }).map(function (currentValue, index) {
+              return Math.log(parseFloat(currentValue[column]));
+            })
+          };
+
+          var logtrace = {
+            x: primary_x_data[ii].data,
+            y: primary_y_data[ii].data,
+            mode: 'lines+markers',
+            yaxis: 'y',
+            type: 'scatter',
+            name: device_name
+          };
+          logdata.push(logtrace);
+        }
+      }
+
+      if($scope.secondary_columns) {
+        for (var ii = 0; ii < $scope.secondary_columns.length; ii++) {
+          var column = $scope.secondary_columns[ii];
+          var device_name = $scope.csv_header_row[column].name.split("-")[0].split(".")[0];
+
+          secondary_x_data[ii] = {
+            device: device_name,
+            data: $scope.csvdata.slice(1).filter(function(value){
+              var m = value[0].moment;
+              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+            }).map(function (currentValue, index) {
+              return currentValue[0].str; // always plot against time
+            })
+          };
+
+          secondary_y_data[ii] = {
+            device: device_name,
+            data: $scope.csvdata.slice(1).filter(function(value){
+              var m = value[0].moment;
+              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+            }).map(function (currentValue, index) {
+              return Math.log(parseFloat(currentValue[column]));
+            })
+          };
+
+          var logtrace = {
+            x: secondary_x_data[ii].data,
+            y: secondary_y_data[ii].data,
+            mode: 'lines+markers',
+            yaxis: 'y',
+            type: 'scatter',
+            name: device_name
+          };
+          logdata.push(logtrace);
+        }
+      }
+
+      var loglayout = {height: 600};
+
+      if($scope.primary_axis_title){
+        loglayout.yaxis = {title: "LOG("+$scope.primary_axis_title+")"};
+        loglayout.title = "LOG("+$scope.primary_axis_title+")";
+      }
+
+      if($scope.secondary_axis_title) {
+        loglayout.yaxis2 = {
+          title: "LOG("+$scope.secondary_axis_title+")",
+          overlaying: 'y',
+          side: 'right'
+        };
+
+        if(loglayout.title){
+          loglayout.title += " and ";
+        }
+
+        loglayout.title += "LOG("+$scope.secondary_axis_title + ")";
+      }
+
+      if(loglayout.title){
+        loglayout.title += " vs. Time";
+      }
+
+      // plot the natural log of the data on the loglinear plot and keep the zooms in sync
+      Plotly.newPlot('loglinear', logdata, loglayout);
     }
 }]);

@@ -26,6 +26,12 @@ block content
         div.col-md-5.text-left
           button.btn.btn-info(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="addToPlotSecondary()") Add To Plot
           button.btn.btn-danger(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="removeFromPlotSecondary()") Remove From Plot
-
+    div.row.form-group
+      div.col-md-5.col-md-offset-1.text-right
+        span(ng-show="header_loaded()") Target Device: &nbsp;
+        select.c-select(ng-model="target_device", ng-options="obj.idx as obj.name for obj in target_devices", ng-show="header_loaded()", ng-change="target_device_change()")
     div.row
       div#scatterplot.col-md-12(style="height: 600px;")
+
+    div.row
+      div#loglinear.col-md-12(style="height: 600px;")
