@@ -307,7 +307,7 @@ angular.module('MyApp', ['ngFileUpload'])
             device: device_name,
             data: $scope.csvdata.slice(1).filter(function (value) {
               var m = value[0].moment;
-              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+              return m.isSameOrAfter($scope.zoom_start_date) && m.isSameOrBefore($scope.zoom_end_date);
             }).map(function (currentValue, index) {
               return currentValue[0].str; // always plot against time
             })
@@ -317,7 +317,7 @@ angular.module('MyApp', ['ngFileUpload'])
             device: device_name,
             data: $scope.csvdata.slice(1).filter(function (value) {
               var m = value[0].moment;
-              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+              return m.isSameOrAfter($scope.zoom_start_date) && m.isSameOrBefore($scope.zoom_end_date);
             }).map(function (currentValue, index) {
               return currentValue[0].moment; // always plot against time
             })
@@ -327,7 +327,7 @@ angular.module('MyApp', ['ngFileUpload'])
             device: device_name,
             data: $scope.csvdata.slice(1).filter(function(value){
               var m = value[0].moment;
-              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+              return m.isSameOrAfter($scope.zoom_start_date) && m.isSameOrBefore($scope.zoom_end_date);
             }).map(function (currentValue, index) {
               return Math.log(parseFloat(currentValue[column]));
             })
@@ -354,7 +354,7 @@ angular.module('MyApp', ['ngFileUpload'])
             device: device_name,
             data: $scope.csvdata.slice(1).filter(function(value){
               var m = value[0].moment;
-              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+              return m.isSameOrAfter($scope.zoom_start_date) && m.isSameOrBefore($scope.zoom_end_date);
             }).map(function (currentValue, index) {
               return currentValue[0].str; // always plot against time
             })
@@ -364,7 +364,7 @@ angular.module('MyApp', ['ngFileUpload'])
             device: device_name,
             data: $scope.csvdata.slice(1).filter(function(value){
               var m = value[0].moment;
-              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+              return m.isSameOrAfter($scope.zoom_start_date) && m.isSameOrBefore($scope.zoom_end_date);
             }).map(function (currentValue, index) {
               return currentValue[0].moment; // always plot against time
             })
@@ -374,7 +374,7 @@ angular.module('MyApp', ['ngFileUpload'])
             device: device_name,
             data: $scope.csvdata.slice(1).filter(function(value){
               var m = value[0].moment;
-              return m.isAfter($scope.zoom_start_date) && m.isBefore($scope.zoom_end_date);
+              return m.isSameOrAfter($scope.zoom_start_date) && m.isSameOrBefore($scope.zoom_end_date);
             }).map(function (currentValue, index) {
               return Math.log(parseFloat(currentValue[column]));
             })

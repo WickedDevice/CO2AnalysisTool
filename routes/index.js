@@ -74,14 +74,14 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
             if(!first_date){
               first_date = m;
             }
-            else if(m.isBefore(first_date)){
+            else if(m.isSameOrBefore(first_date)){
               first_date = m;
             }
 
             if(!last_date){
               last_date = m;
             }
-            else if(m.isAfter(last_date)){
+            else if(m.isSameOrAfter(last_date)){
               last_date = m;
             }
           }
@@ -98,11 +98,11 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
     var first_date = analyzedParsedCsvData[0].first_date;
     var last_date = analyzedParsedCsvData[0].last_date;
     for(var ii = 0; ii < analyzedParsedCsvData.length; ii++){
-      if(analyzedParsedCsvData[ii].first_date.isBefore(first_date)){
+      if(analyzedParsedCsvData[ii].first_date.isSameOrBefore(first_date)){
         first_date = analyzedParsedCsvData[ii].first_date;
       }
 
-      if(analyzedParsedCsvData[ii].last_date.isAfter(last_date)){
+      if(analyzedParsedCsvData[ii].last_date.isSameOrAfter(last_date)){
         last_date = analyzedParsedCsvData[ii].last_date;
       }
     }
@@ -139,12 +139,12 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
     var mega_row = [];
     var candidate_rows = {};
     var timestamp_for_row = null;
-    while(first_date.isBefore(last_date)){
+    while(first_date.isSameOrBefore(last_date)){
       var end_of_window = moment(first_date).add(half_sample_rate, "seconds");
       var start_of_window = moment(first_date).subtract(half_sample_rate, "seconds");
       timestamp_for_row = null;
 
-      //if(moment("2016-03-25 15:00:00", "YYYY-MM-DD HH:mm:ss").isBefore(start_of_window)){
+      //if(moment("2016-03-25 15:00:00", "YYYY-MM-DD HH:mm:ss").isSameOrBefore(start_of_window)){
       //  console.log("Break!");
       //}
 
@@ -169,10 +169,10 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
           var row_timestamp = row[0];
 
           // stop searching this file if you encounter a time that occurs after the end of the window
-          if(row_timestamp.isAfter(end_of_window)){
+          if(row_timestamp.isSameOrAfter(end_of_window)){
             break;
           }
-          else if(row_timestamp.isBefore(end_of_window) && row_timestamp.isAfter(start_of_window)){
+          else if(row_timestamp.isSameOrBefore(end_of_window) && row_timestamp.isSameOrAfter(start_of_window)){
             // we have a winner for this moment, store it and set the flag
             //row[0] = JSON.stringify(search_indexes)
             //  + " using " + ii + " " + analyzedParsedCsvData[ii].filename
