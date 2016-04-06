@@ -438,13 +438,19 @@ angular.module('MyApp', ['ngFileUpload'])
         // do the various maths on the target device data
         var regression = null;
         if(data_idx !== null) {
+          math.config({
+            number: 'BigNumber', // Default type of number:
+                                 // 'number' (default), 'BigNumber', or 'Fraction'
+            precision: 64        // Number of significant digits for BigNumbers
+          });
+
           // Count the number of given x values.
           // Calculate SUM(X), SUM(Y), SUM(X*Y), SUM(X^2) for the values
-          var num_x_values = 0;
-          var sum_xy_values = 0.0;
-          var sum_x_values = 0.0;
-          var sum_y_values = 0.0;
-          var sum_x_squared_values = 0.0;
+          var num_x_values = math.chain(math.bignumber(0));
+          var sum_xy_values = math.chain(math.bignumber(0.0));
+          var sum_x_values = math.chain(math.bignumber(0.0));
+          var sum_y_values = math.chain(math.bignumber(0.0));
+          var sum_x_squared_values = math.chain(math.bignumber(0.0));
           // calculate the regression
           for (var ii = 0; ii < primary_x_data[data_idx].data.length; ii++) {
             var x_value = primary_x_moments[data_idx].data[ii];
@@ -452,37 +458,73 @@ angular.module('MyApp', ['ngFileUpload'])
 
             if (x_value != null && y_value != null && !isNaN(y_value)) {
               var unix_time = x_value.unix();
-              sum_y_values += primary_y_data[data_idx].data[ii];
-              sum_x_values += unix_time;
-              sum_x_squared_values += unix_time * unix_time;
-              sum_xy_values += unix_time * y_value;
-              num_x_values++;
+              sum_y_values = sum_y_values.add(math.bignumber(primary_y_data[data_idx].data[ii]));
+              sum_x_values = sum_x_values.add(math.bignumber(unix_time));
+              var x_squared = math.chain(math.bignumber(unix_time)).multiply(math.bignumber(unix_time)).done();
+              sum_x_squared_values = sum_x_squared_values.add(x_squared);
+              var xy = math.chain(math.bignumber(unix_time)).multiply(math.bignumber(y_value)).done();
+              sum_xy_values = sum_xy_values.add(xy);
+              num_x_values = num_x_values.add(1);
             }
           }
 
           // Slope(b) = (N * SUM(X*Y) - SUM(X)*SUM(Y) / (N * SUM(X^2) - (SUM(X))^2)
           // Intercept(a) = (SUM(Y) - b * SUM(X)) / N
-          var slope = (num_x_values * sum_xy_values - sum_x_values * sum_y_values) / (num_x_values * sum_x_squared_values - (sum_x_values * sum_x_values));
-          var intercept = (sum_y_values - slope * sum_x_values) / num_x_values;
+          num_x_values = num_x_values.done();
+          sum_xy_values = sum_xy_values.done();
+          sum_x_values = sum_x_values.done();
+          sum_y_values = sum_y_values.done();
+          sum_x_squared_values = sum_x_squared_values.done();
 
-          var y_mean = sum_y_values / num_x_values;
-          var total_sum_of_squares = 0.0;
-          var explained_sum_of_squares = 0.0;
-          var residual_sum_of_squares = 0.0;
+          var slope = math.chain(
+            math.chain(
+              math.chain(math.bignumber(num_x_values)).multiply(math.bignumber(sum_xy_values)).done())
+              .subtract(
+                math.chain(math.bignumber(sum_x_values)).multiply(math.bignumber(sum_y_values)).done()).done())
+              .divide(
+                math.chain(
+                  math.chain(math.bignumber(num_x_values)).multiply(math.bignumber(sum_x_squared_values)).done())
+                .subtract(
+                  math.chain(math.bignumber(sum_x_values)).multiply(math.bignumber(sum_x_values)).done()).done()).done().toNumber();
+          var intercept = math.chain(math.bignumber(sum_y_values))
+            .subtract(
+              math.chain(math.bignumber(slope)).multiply(math.bignumber(sum_x_values)).done())
+            .divide(math.bignumber(num_x_values)).done().toNumber();
+
+          var y_mean = math.chain(math.bignumber(sum_y_values)).divide(math.bignumber(num_x_values)).done();
+          var total_sum_of_squares = math.chain(math.bignumber(0.0));
+          var explained_sum_of_squares = math.chain(math.bignumber(0.0));
+          var residual_sum_of_squares = math.chain(math.bignumber(0.0));
           // calculate the fit quality measures
           for (var ii = 0; ii < primary_x_data[data_idx].data.length; ii++) {
             var x_value = primary_x_moments[data_idx].data[ii];
             var y_value = primary_y_data[data_idx].data[ii];
             if (x_value != null && y_value != null && !isNaN(y_value)) {
               var unix_time = x_value.unix();
-              var fit_value = unix_time * slope + intercept
-              total_sum_of_squares += (y_value - y_mean) * (y_value - y_mean);
-              explained_sum_of_squares += (fit_value - y_mean) * (fit_value - y_mean);
-              residual_sum_of_squares += (y_value - fit_value) * (y_value - fit_value);
+              var fit_value = math.chain(math.bignumber(unix_time)).multiply(math.bignumber(slope)).add(math.bignumber(intercept)).done();
+              total_sum_of_squares = total_sum_of_squares.add(
+                math.chain(
+                  math.chain(math.bignumber(y_value)).subtract(math.bignumber(y_mean)).done())
+                  .multiply(
+                    math.chain(math.bignumber(y_value)).subtract(math.bignumber(y_mean)).done()).done());
+
+              explained_sum_of_squares = explained_sum_of_squares.add(
+                math.chain(
+                  math.chain(math.bignumber(fit_value)).subtract(math.bignumber(y_mean)).done())
+                  .multiply(
+                    math.chain(math.bignumber(fit_value)).subtract(math.bignumber(y_mean)).done()).done());
+
+              residual_sum_of_squares = residual_sum_of_squares.add(
+                math.chain(
+                  math.chain(math.bignumber(y_value)).subtract(math.bignumber(fit_value)).done())
+                  .multiply(
+                    math.chain(math.bignumber(y_value)).subtract(math.bignumber(fit_value)).done()).done());
             }
           }
 
-          var r_squared = 1 - (residual_sum_of_squares / total_sum_of_squares);
+          var r_squared = math.chain(1).subtract(
+            math.chain(residual_sum_of_squares.done())
+              .divide(total_sum_of_squares.done()).done()).done().toNumber();
 
           var x_start = $scope.zoom_start_date.format("YYYY-MM-DD HH:mm:ss");
           var x_end = $scope.zoom_end_date.format("YYYY-MM-DD HH:mm:ss");
@@ -505,7 +547,7 @@ angular.module('MyApp', ['ngFileUpload'])
             intercept: intercept,
             r_squared: r_squared,
             y_mean: y_mean,
-            num_points: num_x_values,
+            num_points: num_x_values.toNumber(),
             ACH: ach,
             concentration_half_life: concentration_half_life,
             trace: logtrace,
