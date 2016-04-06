@@ -10,7 +10,7 @@ var csvstringify = Promise.promisify(require('csv-stringify'));
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
+  res.render('index', { title: 'CO2 Graphalyzer' });
 });
 
 router.post('/upload', multipartyMiddleware, function(req, res, next) {
