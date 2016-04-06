@@ -212,7 +212,7 @@ angular.module('MyApp', ['ngFileUpload'])
               y: $scope.csvdata.map(function (currentValue, index) {
                 return parseFloat(currentValue[column]);
               }).slice(1),
-              mode: 'lines+markers',
+              mode: 'markers',
               yaxis: 'y',
               type: 'scatter',
               name: $scope.csv_header_row[column].name.split("-")[0].split(".")[0]
@@ -231,7 +231,7 @@ angular.module('MyApp', ['ngFileUpload'])
               y: $scope.csvdata.map(function(currentValue, index){
                 return parseFloat(currentValue[column]);
               }).slice(1),
-              mode: 'lines+markers',
+              mode: 'markers',
               yaxis: 'y2',
               type: 'scatter',
               name: $scope.csv_header_row[column].name.split("-")[0].split(".")[0]
@@ -336,7 +336,7 @@ angular.module('MyApp', ['ngFileUpload'])
           var logtrace = {
             x: primary_x_data[ii].data,
             y: primary_y_data[ii].data,
-            mode: 'lines+markers',
+            mode: 'markers',
             yaxis: 'y',
             type: 'scatter',
             name: device_name
@@ -383,7 +383,7 @@ angular.module('MyApp', ['ngFileUpload'])
           var logtrace = {
             x: secondary_x_data[ii].data,
             y: secondary_y_data[ii].data,
-            mode: 'lines+markers',
+            mode: 'markers',
             yaxis: 'y',
             type: 'scatter',
             name: device_name
