@@ -34,7 +34,9 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
     });
   }).map(function(obj){
     // parse the file contents as CSV
-    var fileContents = obj.contents;
+    var fileContents = obj.contents;g
+    fileContents = fileContents.toString().replace(/\r?\n/g, "\r\n");
+
     var obj = { filename: obj.filename };
     return Promise.try(function(){
       return csvparse(fileContents);
@@ -87,6 +89,10 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
           }
         }
     }
+
+    if(last_date.diff(first_date, "hours") > 4){
+      throw new Error("Implied duration of time series is longer than 4 hours");
+
     return {
       rows: parsedCsv,
       first_date: first_date,
