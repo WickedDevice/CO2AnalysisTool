@@ -7,6 +7,7 @@ var fs = require('fs-extra-promise');
 var moment = require('moment');
 var csvparse= Promise.promisify(require('csv-parse'));
 var csvstringify = Promise.promisify(require('csv-stringify'));
+var promiseDoWhilst = require('promise-do-whilst');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
@@ -128,7 +129,7 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
         dummy_row[analyzedParsedCsvData[ii].filename] = [];
         for (var jj = 1; jj < analyzedParsedCsvData[ii].rows[0].length; jj++) {
           // we should only generate a header entry for one timestam
-          mega_header_row.push(analyzedParsedCsvData[ii].filename + "-" + analyzedParsedCsvData[ii].rows[0][jj]);
+            mega_header_row.push(analyzedParsedCsvData[ii].filename + "$$" + analyzedParsedCsvData[ii].rows[0][jj]);
           dummy_row[analyzedParsedCsvData[ii].filename].push("---");
         }
       }
@@ -146,88 +147,96 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
     var mega_row = [];
     var candidate_rows = {};
     var timestamp_for_row = null;
-    while(first_date.isSameOrBefore(last_date)){
-      var end_of_window = moment(first_date).add(half_sample_rate, "seconds");
-      var start_of_window = moment(first_date).subtract(half_sample_rate, "seconds");
-      timestamp_for_row = null;
+    if(first_date.isSameOrBefore(last_date)){
+      return promiseDoWhilst(() => {
+        return Promise.try(() => {
+          var end_of_window = moment(first_date).add(half_sample_rate, "seconds");
+          var start_of_window = moment(first_date).subtract(half_sample_rate, "seconds");
+          timestamp_for_row = null;
 
-      //if(moment("2016-03-25 15:00:00", "YYYY-MM-DD HH:mm:ss").isSameOrBefore(start_of_window)){
-      //  console.log("Break!");
-      //}
+          //if(moment("2016-03-25 15:00:00", "YYYY-MM-DD HH:mm:ss").isSameOrBefore(start_of_window)){
+          //  console.log("Break!");
+          //}
 
-      // for each sample moment, search for a record in each file that
-      // is within a half_sample_rate of the current moment of interest
-      // advance the pointer in each file until it is beyond the window
-      found = false;
-      mega_row = [];
+          // for each sample moment, search for a record in each file that
+          // is within a half_sample_rate of the current moment of interest
+          // advance the pointer in each file until it is beyond the window
+          found = false;
+          mega_row = [];
 
-      candidate_rows = {};
-      for(var ii = 0; ii < analyzedParsedCsvData.length; ii++){
-        if(analyzedParsedCsvData[ii] && analyzedParsedCsvData[ii].filename) {
-          candidate_rows[analyzedParsedCsvData[ii].filename] = [];
-        }
-      }
-
-      for(var ii = 0; ii < analyzedParsedCsvData.length; ii++){
-        var jj;
-        for(jj = search_indexes[ii]; jj < analyzedParsedCsvData[ii].rows.length; jj++){
-
-          var row = analyzedParsedCsvData[ii].rows[jj].slice(0, analyzedParsedCsvData[ii].rows[jj].length);
-          var row_timestamp = row[0];
-
-          // stop searching this file if you encounter a time that occurs after the end of the window
-          if(row_timestamp.isSameOrAfter(end_of_window)){
-            break;
-          }
-          else if(row_timestamp.isSameOrBefore(end_of_window) && row_timestamp.isSameOrAfter(start_of_window)){
-            // we have a winner for this moment, store it and set the flag
-            //row[0] = JSON.stringify(search_indexes)
-            //  + " using " + ii + " " + analyzedParsedCsvData[ii].filename
-            //  + " " + first_date.format("YYYY-MM-DD HH:mm:ss")
-            //  + " " + row_timestamp.format("YYYY-MM-DD HH:mm:ss"); // Plot.ly formatted dates
-            row[0] = row_timestamp.format("YYYY-MM-DD HH:mm:ss"); // Plot.ly formatted dates
-            timestamp_for_row = row[0];
-            //merged_data.push(row); // this is a row
+          candidate_rows = {};
+          for(var ii = 0; ii < analyzedParsedCsvData.length; ii++){
             if(analyzedParsedCsvData[ii] && analyzedParsedCsvData[ii].filename) {
-              candidate_rows[analyzedParsedCsvData[ii].filename] = candidate_rows[analyzedParsedCsvData[ii].filename].concat(row);
-            }
-            found = true;
-          }
-        }
-
-        search_indexes[ii] = jj; // pick up here on the next moment
-      }
-
-      if(!found){
-        //console.log("No viable records found for " + first_date.format("YYYY-MM-DD HH:mm:ss"));
-        num_missing_records++;
-      }
-      else{
-        // create the mega row and push it
-        var mega_row = [timestamp_for_row];
-        for(var ii = 0; ii < analyzedParsedCsvData.length; ii++){
-          if(analyzedParsedCsvData[ii].rows && analyzedParsedCsvData[ii].rows.length > 0) {
-            if(candidate_rows[analyzedParsedCsvData[ii].filename] && candidate_rows[analyzedParsedCsvData[ii].filename].length > 0){
-              // there's a candidate row, stuff them into the mega row
-              var row = candidate_rows[analyzedParsedCsvData[ii].filename];
-              mega_row = mega_row.concat(row.slice(1, row.length));
-            }
-            else{
-              // there's no candidate row... file in blanks for this set of headers
-              var row = dummy_row[analyzedParsedCsvData[ii].filename];
-              mega_row = mega_row.concat(row);
+              candidate_rows[analyzedParsedCsvData[ii].filename] = [];
             }
           }
-        }
-        merged_data.push(mega_row);
-      }
 
-      first_date.add(sample_rate, 'seconds');
+          for(var ii = 0; ii < analyzedParsedCsvData.length; ii++){
+            var jj;
+            for(jj = search_indexes[ii]; jj < analyzedParsedCsvData[ii].rows.length; jj++){
+
+              var row = analyzedParsedCsvData[ii].rows[jj].slice(0, analyzedParsedCsvData[ii].rows[jj].length);
+              var row_timestamp = row[0];
+
+              // stop searching this file if you encounter a time that occurs after the end of the window
+              if(row_timestamp.isSameOrAfter(end_of_window)){
+                break;
+              }
+              else if(row_timestamp.isSameOrBefore(end_of_window) && row_timestamp.isSameOrAfter(start_of_window)){
+                // we have a winner for this moment, store it and set the flag
+                //row[0] = JSON.stringify(search_indexes)
+                //  + " using " + ii + " " + analyzedParsedCsvData[ii].filename
+                //  + " " + first_date.format("YYYY-MM-DD HH:mm:ss")
+                //  + " " + row_timestamp.format("YYYY-MM-DD HH:mm:ss"); // Plot.ly formatted dates
+                row[0] = row_timestamp.format("YYYY-MM-DD HH:mm:ss"); // Plot.ly formatted dates
+                timestamp_for_row = row[0];
+                //merged_data.push(row); // this is a row
+                if(analyzedParsedCsvData[ii] && analyzedParsedCsvData[ii].filename) {
+                  candidate_rows[analyzedParsedCsvData[ii].filename] = candidate_rows[analyzedParsedCsvData[ii].filename].concat(row);
+                }
+                found = true;
+              }
+            }
+
+            search_indexes[ii] = jj; // pick up here on the next moment
+          }
+
+          if(!found){
+            //console.log("No viable records found for " + first_date.format("YYYY-MM-DD HH:mm:ss"));
+            num_missing_records++;
+          }
+          else{
+            // create the mega row and push it
+            var mega_row = [timestamp_for_row];
+            for(var ii = 0; ii < analyzedParsedCsvData.length; ii++){
+              if(analyzedParsedCsvData[ii].rows && analyzedParsedCsvData[ii].rows.length > 0) {
+                if(candidate_rows[analyzedParsedCsvData[ii].filename] && candidate_rows[analyzedParsedCsvData[ii].filename].length > 0){
+                  // there's a candidate row, stuff them into the mega row
+                  var row = candidate_rows[analyzedParsedCsvData[ii].filename];
+                  mega_row = mega_row.concat(row.slice(1, row.length));
+                }
+                else{
+                  // there's no candidate row... file in blanks for this set of headers
+                  var row = dummy_row[analyzedParsedCsvData[ii].filename];
+                  mega_row = mega_row.concat(row);
+                }
+              }
+            }
+            merged_data.push(mega_row);
+          }
+
+          first_date.add(sample_rate, 'seconds');
+        });
+      }, () => {
+        return first_date.isSameOrBefore(last_date);
+      }).then(() => {
+        console.log("Merge complete @ " + moment().format() + " [" + moment().diff(start, "seconds") + "], merged down to " + merged_data.length + " records, missing records: " + num_missing_records);
+        return merged_data;
+      });
     }
-    console.log("Merge complete @ " + moment().format() + " [" + moment().diff(start, "seconds") + "], merged down to " + merged_data.length + " records, missing records: " + num_missing_records);
-
-    return merged_data;
-
+    else{
+      return [];
+    }
   }).then(function(merged_data){
     var data = merged_data;
     return Promise.try(function(){

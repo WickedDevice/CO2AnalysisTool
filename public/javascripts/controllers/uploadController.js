@@ -123,7 +123,7 @@ angular.module('MyApp', ['ngFileUpload'])
 
                     $scope.target_devices = {};
                     for(var ii = 0; ii < $scope.csv_header_row.length; ii++){
-                      var tmp = $scope.csv_header_row[ii].name.split("-");
+                      var tmp = $scope.csv_header_row[ii].name.split("$$");
                       if(tmp.length > 1){
                         tmp = tmp[0].split(".");
                         if(tmp.length > 1){
@@ -145,7 +145,7 @@ angular.module('MyApp', ['ngFileUpload'])
                     $scope.csv_header_row_reduced = {};
                     for(var ii = 0; ii < $scope.csv_header_row.length; ii++){
                       var name = $scope.csv_header_row[ii].name;
-                      var rhs = name.split('-');
+                      var rhs = name.split('$$');
                       if(rhs.length > 1){
                         $scope.csv_header_row_reduced[rhs[1]] = 1;
                       }
@@ -215,7 +215,7 @@ angular.module('MyApp', ['ngFileUpload'])
               mode: 'markers',
               yaxis: 'y',
               type: 'scatter',
-              name: $scope.csv_header_row[column].name.split("-")[0].split(".")[0]
+              name: $scope.csv_header_row[column].name.split("$$")[0].split(".")[0]
             };
             data.push(trace);
           }
@@ -234,7 +234,7 @@ angular.module('MyApp', ['ngFileUpload'])
               mode: 'markers',
               yaxis: 'y2',
               type: 'scatter',
-              name: $scope.csv_header_row[column].name.split("-")[0].split(".")[0]
+              name: $scope.csv_header_row[column].name.split("$$")[0].split(".")[0]
             };
             data.push(trace);
           }
@@ -301,7 +301,7 @@ angular.module('MyApp', ['ngFileUpload'])
       if($scope.primary_columns) {
         for (var ii = 0; ii < $scope.primary_columns.length; ii++) {
           var column = $scope.primary_columns[ii];
-          var device_name = $scope.csv_header_row[column].name.split('-')[0].split(".")[0];
+          var device_name = $scope.csv_header_row[column].name.split('$$')[0].split(".")[0];
 
           primary_x_data[ii] = {
             device: device_name,
@@ -348,7 +348,7 @@ angular.module('MyApp', ['ngFileUpload'])
       if($scope.secondary_columns) {
         for (var ii = 0; ii < $scope.secondary_columns.length; ii++) {
           var column = $scope.secondary_columns[ii];
-          var device_name = $scope.csv_header_row[column].name.split("-")[0].split(".")[0];
+          var device_name = $scope.csv_header_row[column].name.split("$$")[0].split(".")[0];
 
           secondary_x_data[ii] = {
             device: device_name,
