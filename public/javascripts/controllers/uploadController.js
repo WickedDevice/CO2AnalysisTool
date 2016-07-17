@@ -17,6 +17,9 @@ angular.module('MyApp', ['ngFileUpload'])
     $scope.target_devices = [{idx: -1, name: 'None'}];
     $scope.target_device = -1;
 
+    $scope.auto_regression_peak_decent_start_value = 9000;
+    $scope.auto_regression_peak_decent_end_value = 2000;
+
     $scope.regressions = []; // will ultimately contain an object encapsulating regression results for each egg
     $scope.summary_stats = null;;
 
@@ -49,6 +52,63 @@ angular.module('MyApp', ['ngFileUpload'])
         }
       }
 
+      renderPlots();
+
+      $scope.automaticRegression();
+    };
+
+    $scope.automaticRegression = function(){
+      // after rendering the plots... go through all the traces
+      // for each trace, figure out and set the zoom window and run the updateLogLinear function
+
+      $scope.target_devices.forEach((device) => {
+        if(device.idx < 0){
+          return;
+        }
+        $scope.zoom_start_date = null;
+        $scope.zoom_end_date = null;
+        $scope.target_device = device.idx;
+
+        // for this particular device, go through it's data
+        var foundStartDate = false;
+        var foundEndDate = false;
+        var previousValue = 0;
+
+        getXYDataForSelectedDevice().forEach((point) => {
+          var currentValue = point.y;
+          if(!foundStartDate){
+            // find the first occurrence that is <= "high value" where its predecessor is strictly larger than it
+            if((previousValue > currentValue) && (currentValue <= $scope.auto_regression_peak_decent_start_value)){
+              foundStartDate = true;
+              $scope.zoom_start_date = point.x;
+            }
+          }
+          else if(!foundEndDate){
+            // now we are looking for the first value that is <= "low value"
+            if(currentValue <= $scope.auto_regression_peak_decent_end_value){
+              foundEndDate = true;
+              $scope.zoom_end_date = point.x;
+            }
+          }
+          if(!isNaN(point.y)){
+            previousValue = point.y;
+          }
+        });
+
+        if(foundStartDate && foundEndDate){
+          updateLogLinear();
+        }
+        else if(!foundStartDate){
+          alert("Could not determine decay start for " + device.name + "\nPlease change High Value and Re-Calculate (<" + previousValue + ")");
+        }
+        else if(!foundEndDate){
+          alert("Could not determine decay termination for " + device.name + "\nPlease change Low Value and Re-Calculate  (>" + previousValue + ")");
+        }
+      });
+
+      $scope.zoom_start_date = null;
+      $scope.zoom_end_date = null;
+      $scope.target_device = -1;
       renderPlots();
     };
 
@@ -198,6 +258,49 @@ angular.module('MyApp', ['ngFileUpload'])
             });
         }
     };
+
+    function getNameOfSelectedDevice(){
+      var name = null;
+      $scope.target_devices.forEach((device) => {
+        if(device.idx === $scope.target_device){
+          name = device.name;
+        }
+      });
+
+      return name;
+    }
+
+    function getXYDataForSelectedDevice(){
+      var targetName = getNameOfSelectedDevice();
+      var result = [];
+
+      if($scope.primary_columns) {
+        for (var ii = 0; ii < $scope.primary_columns.length; ii++) {
+
+          var column = $scope.primary_columns[ii];
+          var name = $scope.csv_header_row[column].name.split("$$")[0].split(".")[0];
+
+          if(name === targetName) {
+            result = $scope.csvdata.map(function (currentValue, index) {
+              return moment(currentValue[0].str, "YYYY-MM-DD HH:mm:ss"); // always plot against time
+            }).slice(1).map((value) => {
+              return {
+                x: value
+              };
+            });
+
+            $scope.csvdata.map(function (currentValue, index) {
+              return parseFloat(currentValue[column]);
+            }).slice(1).forEach((value, index) => {
+              result[index].y = value;
+            });
+
+            break;
+          }
+        }
+      }
+      return result;
+    }
 
     function renderPlots(){
 

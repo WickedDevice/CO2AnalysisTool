@@ -9,28 +9,30 @@ block content
       span.col-md-4.col-md-offset-4.progress(ng-show="progress >= 0")
         div(style="width:{{progress}}%", ng-bind="progress + '%'")
     div.row.text-center(style="height:20px")
-    form
-      div.row.form-group
-        div.col-md-12.text-center
-          button.btn.btn-primary(style="margin-left:10px;", type="button", ngf-select="uploadFiles($files)", multiple="multiple") Select Files
-      div.row.form-group
-        div.col-md-5.col-md-offset-1.text-right
-          span(ng-show="header_loaded()") Primary Plot: &nbsp;
-          select.c-select(ng-model="primary_column", ng-options="obj.idx as obj.name for obj in csv_header_row_reduced", ng-show="header_loaded()", ng-change="primary_column_change()")
-        div.col-md-5.text-left
-          button.btn.btn-info(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="addToPlotPrimary()") Add To Plot
-          button.btn.btn-danger(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="removeFromPlotPrimary()") Remove From Plot
-      div.row.form-group
-        div.col-md-5.col-md-offset-1.text-right
-          span(ng-show="header_loaded()") Secondary Plot: &nbsp;
-          select.c-select(ng-model="secondary_column", ng-options="obj.idx as obj.name for obj in csv_header_row_reduced", ng-show="header_loaded()", ng-change="secondary_column_change()")
-        div.col-md-5.text-left
-          button.btn.btn-info(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="addToPlotSecondary()") Add To Plot
-          button.btn.btn-danger(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="removeFromPlotSecondary()") Remove From Plot
-    div.row.form-group
-      div.col-md-5.col-md-offset-1.text-right
-        span(ng-show="header_loaded()") Target Device: &nbsp;
-        select.c-select(ng-model="target_device", ng-options="obj.idx as obj.name for obj in target_devices", ng-show="header_loaded()", ng-change="target_device_change()")
+    form.text-center
+      div.form-group
+        button.btn.btn-primary(type="button", ngf-select="uploadFiles($files)", multiple="multiple") Select Files
+    form.form-inline.text-center(style="margin-bottom:15px")
+      div.form-group
+        label(for="primary_column", ng-show="header_loaded()") Field: &nbsp;
+        select#primary_column.form-control(ng-model="primary_column", ng-options="obj.idx as obj.name for obj in csv_header_row_reduced", ng-show="header_loaded()", ng-change="primary_column_change()")
+        button.btn.btn-info(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="addToPlotPrimary()") Add To Plot
+        button.btn.btn-danger(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="removeFromPlotPrimary()") Remove From Plot
+    //form.form-inline(style="padding-left:350px;")
+    //  div.form-group
+    //    label(for="secondary_column", ng-show="header_loaded()") Secondary Plot: &nbsp;
+    //    select#secondary_column.form-control(ng-model="secondary_column", ng-options="obj.idx as obj.name for obj in csv_header_row_reduced", ng-show="header_loaded()", ng-change="secondary_column_change()")
+    //    button.btn.btn-info(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="addToPlotSecondary()") Add To Plot
+    //    button.btn.btn-danger(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="removeFromPlotSecondary()") Remove From Plot
+    form.form-inline.text-center(style="margin-bottom:15px")
+      div.form-group
+        label(for="target_device", ng-show="header_loaded()") Target Device: &nbsp;
+        select#target_device.form-control(ng-model="target_device", ng-options="obj.idx as obj.name for obj in target_devices", ng-show="header_loaded()", ng-change="target_device_change()")
+        label(for="arpk", ng-show="header_loaded()") &nbsp;&nbsp; High Value: &nbsp;
+        input#arpk.form-control(size="8", type="text", ng-model="auto_regression_peak_decent_start_value", ng-show="header_loaded()")
+        label(for="artr", ng-show="header_loaded()") &nbsp;&nbsp; Low Value: &nbsp;
+        input#artr.form-control(size="8", type="text", ng-model="auto_regression_peak_decent_end_value", ng-show="header_loaded()")
+        button.btn.btn-warning(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="automaticRegression()") Re-Calculate
     div.row(ng-show="at_least_one_regression()")
       div.col-md-12
         table.table.table-bordered
