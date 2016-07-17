@@ -28,8 +28,12 @@ block content
       div.form-group
         label(for="target_device", ng-show="header_loaded()") Target Device: &nbsp;
         select#target_device.form-control(ng-model="target_device", ng-options="obj.idx as obj.name for obj in target_devices", ng-show="header_loaded()", ng-change="target_device_change()")
+        label.checkbox-inline
+          | &nbsp; &nbsp;
+          input(ng-model="use_max_for_peak_decent_start_value", type="checkbox", value="1", ng-show="header_loaded()")
+          span(ng-show="header_loaded()") Use Max Values
         label(for="arpk", ng-show="header_loaded()") &nbsp;&nbsp; High Value: &nbsp;
-        input#arpk.form-control(size="8", type="text", ng-model="auto_regression_peak_decent_start_value", ng-show="header_loaded()")
+        input#arpk.form-control(size="8", type="text", ng-disabled="use_max_for_peak_decent_start_value" ng-model="auto_regression_peak_decent_start_value", ng-show="header_loaded()")
         label(for="artr", ng-show="header_loaded()") &nbsp;&nbsp; Low Value: &nbsp;
         input#artr.form-control(size="8", type="text", ng-model="auto_regression_peak_decent_end_value", ng-show="header_loaded()")
         button.btn.btn-warning(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="automaticRegression()") Re-Calculate

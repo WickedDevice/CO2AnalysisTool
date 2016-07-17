@@ -19,6 +19,7 @@ angular.module('MyApp', ['ngFileUpload'])
 
     $scope.auto_regression_peak_decent_start_value = 9000;
     $scope.auto_regression_peak_decent_end_value = 2000;
+    $scope.use_max_for_peak_decent_start_value = true;
 
     $scope.regressions = []; // will ultimately contain an object encapsulating regression results for each egg
     $scope.summary_stats = null;;
@@ -74,18 +75,31 @@ angular.module('MyApp', ['ngFileUpload'])
         var foundEndDate = false;
         var previousValue = 0;
 
+        var peakValue = $scope.auto_regression_peak_decent_start_value;
+        if($scope.use_max_for_peak_decent_start_value){
+          peakValue = 0;
+          getXYDataForSelectedDevice().forEach((point) => {
+            if(peakValue < point.y){
+              peakValue = point.y;
+            }
+          });
+        }
+
+        // maybe there is some way we can use a dynamic value for this too?
+        var lowValue = $scope.auto_regression_peak_decent_end_value;
+
         getXYDataForSelectedDevice().forEach((point) => {
           var currentValue = point.y;
           if(!foundStartDate){
             // find the first occurrence that is <= "high value" where its predecessor is strictly larger than it
-            if((previousValue > currentValue) && (currentValue <= $scope.auto_regression_peak_decent_start_value)){
+            if((previousValue > currentValue) && (currentValue <= peakValue)){
               foundStartDate = true;
               $scope.zoom_start_date = point.x;
             }
           }
           else if(!foundEndDate){
             // now we are looking for the first value that is <= "low value"
-            if(currentValue <= $scope.auto_regression_peak_decent_end_value){
+            if(currentValue <= lowValue){
               foundEndDate = true;
               $scope.zoom_end_date = point.x;
             }
