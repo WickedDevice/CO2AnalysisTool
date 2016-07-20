@@ -87,12 +87,17 @@ angular.module('MyApp', ['ngFileUpload'])
 
         // maybe there is some way we can use a dynamic value for this too?
         var lowValue = $scope.auto_regression_peak_decent_end_value;
-
+        var identifiedPointAtOrAbovePeak = false;
         getXYDataForSelectedDevice().forEach((point) => {
           var currentValue = point.y;
           if(!foundStartDate){
+            // don't allow algorithm to "find start date" before it has experienced a peak
+            if(currentValue >= peakValue){
+              identifiedPointAtOrAbovePeak = true;
+            }
+
             // find the first occurrence that is <= "high value" where its predecessor is strictly larger than it
-            if((previousValue > currentValue) && (currentValue <= peakValue)){
+            if((previousValue > currentValue) && (currentValue <= peakValue) && identifiedPointAtOrAbovePeak){
               foundStartDate = true;
               $scope.zoom_start_date = point.x;
             }
