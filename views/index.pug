@@ -37,6 +37,10 @@ block content
         label(for="artr", ng-show="header_loaded()") &nbsp;&nbsp; Low Value: &nbsp;
         input#artr.form-control(size="8", type="text", ng-model="auto_regression_peak_decent_end_value", ng-show="header_loaded()")
         button.btn.btn-warning(style="margin-left:10px;", type="button", ng-show="header_loaded()", ng-click="automaticRegression()") Re-Calculate
+
+    div.row
+      div#scatterplot.col-md-12(style="height: 600px;")
+      
     div.row(ng-show="at_least_one_regression()")
       div.col-md-12
         table.table.table-bordered
@@ -87,8 +91,6 @@ block content
             td.text-center {{asPercent(summary_stats.rel_stdev_ACH)}}
             td.text-center {{asPercent(summary_stats.rel_stdev_r_squared)}}
             td.text-center {{asPercent(summary_stats.rel_stdev_concentration_half_life)}}
-    div.row
-      div#scatterplot.col-md-12(style="height: 600px;")
 
     div.row
       div#loglinear.col-md-12(style="height: 600px;")
