@@ -181,6 +181,7 @@ angular.module('MyApp', ['ngFileUpload'])
             Upload.upload({
                 url: 'upload',
                 method: 'POST',
+                timeout: 20 * 60 * 1000, // 20 minutes
                 data: {
                     files: files
                 }

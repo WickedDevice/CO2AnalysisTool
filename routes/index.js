@@ -91,9 +91,9 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
         }
     }
 
-    if(last_date.diff(first_date, "hours") > 12) {
-      throw new Error(`Implied duration of time series, ${last_date.diff(first_date, "hours")}h,is longer than 12 hours`);
-    }
+    //if(last_date.diff(first_date, "hours") > 12) {
+    //  throw new Error(`Implied duration of time series, ${last_date.diff(first_date, "hours")}h,is longer than 12 hours`);
+    //}
     
     return {
       rows: parsedCsv,
