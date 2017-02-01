@@ -179,6 +179,9 @@ router.post('/upload', multipartyMiddleware, function(req, res, next) {
               var row_timestamp = row[0];
 
               // stop searching this file if you encounter a time that occurs after the end of the window
+              if(!row_timestamp || (row_timestamp && !row_timestamp.isSameOrAfter)){
+                continue; // skip malformed timestamps
+              }
               if(row_timestamp.isSameOrAfter(end_of_window)){
                 break;
               }
